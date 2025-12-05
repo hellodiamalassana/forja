@@ -5,6 +5,7 @@ import BuilderPage from './pages/BuilderPage';
 import DashboardPage from './pages/DashboardPage';
 import AuthPage from './pages/AuthPage';
 import PricingPage from './pages/PricingPage';
+import AdminPage from './pages/AdminPage';
 import Navbar from './components/Navbar';
 import ProtectedRoute from './components/ProtectedRoute';
 
@@ -46,6 +47,14 @@ function App() {
           element={
             <ProtectedRoute>
               <DashboardPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin"
+          element={
+            <ProtectedRoute>
+              <AdminPage />
             </ProtectedRoute>
           }
         />

@@ -1,5 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { FiUser, FiLogOut, FiGrid } from 'react-icons/fi';
+import { FiUser, FiLogOut, FiGrid, FiShield } from 'react-icons/fi';
 import useAuthStore from '../store/useAuthStore';
 
 function Navbar() {
@@ -56,6 +56,15 @@ function Navbar() {
                       <FiGrid className="w-4 h-4" />
                       <span>Dashboard</span>
                     </Link>
+                    {user?.role === 'ADMIN' && (
+                      <Link
+                        to="/admin"
+                        className="flex items-center space-x-2 px-4 py-3 hover:bg-dark-700 transition-colors text-red-400"
+                      >
+                        <FiShield className="w-4 h-4" />
+                        <span>Admin</span>
+                      </Link>
+                    )}
                     <button
                       onClick={handleLogout}
                       className="w-full flex items-center space-x-2 px-4 py-3 hover:bg-dark-700 transition-colors text-red-400 rounded-b-xl"

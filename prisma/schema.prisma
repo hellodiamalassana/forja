@@ -16,12 +16,15 @@ model User {
   name      String
   password  String
   plan      Plan     @default(FREE)
+  role      Role     @default(USER)
+  isActive  Boolean  @default(true)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   projects      Project[]
   subscription  Subscription?
+  activityLogs  ActivityLog[]
 
   @@map("users")
 }
@@ -64,10 +67,34 @@ model Subscription {
   @@map("subscriptions")
 }
 
+model ActivityLog {
+  id        String   @id @default(uuid())
+
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  action    String   // "login", "generate", "build", "subscription_change", etc.
+  details   Json?    // Additional info
+  ipAddress String?
+  userAgent String?
+
+  createdAt DateTime @default(now())
+
+  @@map("activity_logs")
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+}
+
 enum Plan {
   FREE
   PRO
   BUSINESS
+}
+
+enum Role {
+  USER
+  ADMIN
 }
 
 enum SubscriptionStatus {

@@ -8,6 +8,7 @@ const apiRoutes = require('./routes/api');
 const authRoutes = require('./routes/auth');
 const projectRoutes = require('./routes/projects');
 const stripeRoutes = require('./routes/stripe');
+const adminRoutes = require('./routes/admin');
 const errorHandler = require('./middleware/errorHandler');
 const config = require('./config/config');
 
@@ -55,6 +56,7 @@ app.get('/health', (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/projects', projectRoutes);
 app.use('/api/stripe', stripeRoutes);
+app.use('/api/admin', adminRoutes);
 app.use('/api', apiRoutes);
 
 // Error handling

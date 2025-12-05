@@ -4,6 +4,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const prisma = require('../lib/prisma');
 const authMiddleware = require('../middleware/authMiddleware');
+const { logActivity } = require('../lib/activityLogger');
 
 // POST /api/auth/register - Register new user
 router.post('/register', async (req, res, next) => {
@@ -116,6 +117,9 @@ router.post('/login', async (req, res, next) => {
       process.env.JWT_SECRET,
       { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
     );
+
+    // Log activity
+    await logActivity(user.id, 'login', { email: user.email }, req);
 
     // Return user without password
     const { password: _, ...userWithoutPassword } = user;

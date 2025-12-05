@@ -6,6 +6,23 @@ const prisma = new PrismaClient();
 async function main() {
   console.log('🌱 Seeding database...');
 
+  // Create admin user
+  const adminPassword = await bcrypt.hash('admin123', 10);
+
+  const adminUser = await prisma.user.upsert({
+    where: { email: 'admin@forja.dev' },
+    update: {},
+    create: {
+      email: 'admin@forja.dev',
+      name: 'Super Admin',
+      password: adminPassword,
+      plan: 'BUSINESS',
+      role: 'ADMIN',
+    },
+  });
+
+  console.log('✅ Created admin user:', adminUser.email);
+
   // Create demo user
   const hashedPassword = await bcrypt.hash('demo123', 10);
 
@@ -17,6 +34,7 @@ async function main() {
       name: 'Demo User',
       password: hashedPassword,
       plan: 'FREE',
+      role: 'USER',
     },
   });
 

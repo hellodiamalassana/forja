@@ -2,13 +2,34 @@ const express = require('express');
 const router = express.Router();
 const claudeService = require('../services/claudeService');
 const electronGenerator = require('../services/electronGenerator');
+const prisma = require('../lib/prisma');
 const { v4: uuidv4 } = require('uuid');
+
+// Optional auth middleware - attaches user if token is valid but doesn't require it
+const optionalAuth = async (req, res, next) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const jwt = require('jsonwebtoken');
+      const token = authHeader.substring(7);
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      const user = await prisma.user.findUnique({
+        where: { id: decoded.userId },
+        select: { id: true, email: true, name: true, plan: true }
+      });
+      if (user) req.user = user;
+    }
+  } catch (error) {
+    // Ignore auth errors for optional auth
+  }
+  next();
+};
 
 // Store sessions in memory (use Redis/DB in production)
 const sessions = new Map();
 
 // POST /api/generate - Generate code from user description
-router.post('/generate', async (req, res, next) => {
+router.post('/generate', optionalAuth, async (req, res, next) => {
   try {
     const { description, sessionId, conversationHistory } = req.body;
 
@@ -41,11 +62,35 @@ router.post('/generate', async (req, res, next) => {
     session.currentProject = result.code;
     sessions.set(currentSessionId, session);
 
+    // Auto-save project if user is authenticated
+    let savedProject = null;
+    if (req.user) {
+      try {
+        // Extract project name from description or use default
+        const projectName = description.substring(0, 50).trim() || 'Mon Application';
+
+        savedProject = await prisma.project.create({
+          data: {
+            name: projectName,
+            description: description,
+            sessionId: currentSessionId,
+            files: result.code.files || result.files,
+            platforms: ['windows'],
+            userId: req.user.id
+          }
+        });
+      } catch (error) {
+        // Ignore save errors (e.g., duplicate sessionId)
+        console.warn('Failed to auto-save project:', error.message);
+      }
+    }
+
     res.json({
       sessionId: currentSessionId,
       aiResponse: result.aiResponse,
       code: result.code,
       files: result.files,
+      projectId: savedProject?.id,
       timestamp: new Date().toISOString()
     });
 
@@ -55,7 +100,7 @@ router.post('/generate', async (req, res, next) => {
 });
 
 // POST /api/modify - Modify existing code
-router.post('/modify', async (req, res, next) => {
+router.post('/modify', optionalAuth, async (req, res, next) => {
   try {
     const { sessionId, modification, currentCode } = req.body;
 
@@ -88,6 +133,21 @@ router.post('/modify', async (req, res, next) => {
     );
     session.currentProject = result.code;
     sessions.set(sessionId, session);
+
+    // Update project in database if user is authenticated
+    if (req.user) {
+      try {
+        await prisma.project.update({
+          where: { sessionId },
+          data: {
+            files: result.code.files || result.files,
+            updatedAt: new Date()
+          }
+        });
+      } catch (error) {
+        console.warn('Failed to update project:', error.message);
+      }
+    }
 
     res.json({
       aiResponse: result.aiResponse,

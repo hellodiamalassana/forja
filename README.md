@@ -8,20 +8,75 @@ Générez des applications Electron installables (Windows, Mac, Linux) simplemen
 
 ## 🚀 Fonctionnalités
 
+### Génération & Code
 - ✨ **Génération par IA** - Décrivez votre app, Claude génère le code
 - 💻 **Multi-plateforme** - Windows (.exe), macOS (.dmg), Linux (.AppImage)
-- 🎨 **Interface moderne** - Design responsive et élégant
 - 🔄 **Modifications en temps réel** - Affinez votre app par conversation
 - 📦 **Code complet** - Package.json, main.js, renderer, styles, tout est généré
 - 🔒 **Sécurisé** - Context isolation et meilleures pratiques Electron
+
+### Interface Utilisateur
+- 🎨 **Frontend React moderne** - Interface dark mode avec Tailwind CSS
+- 💬 **Chat conversationnel** - Générez et modifiez par dialogue naturel
+- 👁️ **Aperçu en temps réel** - Visualisez le code généré instantanément
+- 📱 **Responsive** - Fonctionne sur desktop, tablette et mobile
+
+### Authentification & Comptes
+- 🔐 **JWT Auth** - Connexion/inscription sécurisée
+- 👤 **Profils utilisateurs** - Gestion de compte personnalisé
+- 📂 **Projets sauvegardés** - Tous vos projets dans le cloud
+- 🔄 **Auto-save** - Vos projets sont sauvegardés automatiquement
+
+### Abonnements & Paiements
+- 💳 **Stripe intégré** - Paiements sécurisés
+- 📊 **Plans tarifaires** - Gratuit, Pro (15€/mois), Business (49€/mois)
+- 🎁 **Plan gratuit** - 2 projets, export Windows
+- ⚡ **Plans Pro/Business** - Projets illimités, toutes plateformes
+
+### Base de Données
+- 🗄️ **PostgreSQL + Prisma** - Base de données robuste
+- 📈 **Dashboard utilisateur** - Statistiques et gestion de projets
+- 🔍 **Historique complet** - Toutes vos conversations sauvegardées
+
+---
+
+## 🏗️ Architecture
+
+```
+forja/
+├── backend/              # API Express.js
+│   ├── server.js
+│   ├── routes/
+│   │   ├── api.js       # Génération IA
+│   │   ├── auth.js      # Authentification
+│   │   ├── projects.js  # Gestion projets
+│   │   └── stripe.js    # Paiements
+│   ├── services/
+│   │   ├── claudeService.js
+│   │   └── electronGenerator.js
+│   └── prisma/          # Base de données
+│       └── schema.prisma
+└── frontend/            # React + Vite
+    ├── src/
+    │   ├── pages/       # HomePage, BuilderPage, etc.
+    │   ├── components/  # Navbar, Chat, CodeEditor
+    │   └── store/       # Zustand state management
+    └── package.json
+```
 
 ---
 
 ## 📋 Prérequis
 
+### Backend
+- **Node.js** >= 18.0.0
+- **PostgreSQL** >= 14
+- **Clé API Anthropic Claude** ([obtenir ici](https://console.anthropic.com/))
+- **Compte Stripe** ([créer ici](https://stripe.com))
+
+### Frontend
 - **Node.js** >= 18.0.0
 - **npm** ou **yarn**
-- **Clé API Anthropic Claude** ([obtenir ici](https://console.anthropic.com/))
 
 ---
 
@@ -34,35 +89,84 @@ git clone https://github.com/votre-username/forja.git
 cd forja
 ```
 
-### 2. Installer les dépendances
+### 2. Installer les dépendances Backend
 
 ```bash
 npm install
 ```
 
-### 3. Configuration
+### 3. Configuration de la Base de Données
 
-Copiez `.env.example` vers `.env` et ajoutez votre clé API :
+Créez une base PostgreSQL :
+
+```bash
+createdb forja
+```
+
+Copiez et configurez `.env` :
 
 ```bash
 cp .env.example .env
 ```
 
-Éditez `.env` :
+Éditez `.env` avec vos credentials :
 
 ```env
+# Database
+DATABASE_URL="postgresql://user:password@localhost:5432/forja?schema=public"
+
+# JWT
+JWT_SECRET=votre_secret_jwt_tres_securise
+JWT_EXPIRES_IN=7d
+
+# Stripe
+STRIPE_SECRET_KEY=sk_test_votre_cle
+STRIPE_WEBHOOK_SECRET=whsec_votre_secret
+STRIPE_PRICE_ID_PRO=price_xxxxx
+STRIPE_PRICE_ID_BUSINESS=price_xxxxx
+
+# Claude API
 ANTHROPIC_API_KEY=sk-ant-xxxxxxxxxxxxx
+
+# Server
 PORT=3001
 NODE_ENV=development
+CORS_ORIGIN=http://localhost:3000
 ```
 
-### 4. Démarrer le serveur
+### 4. Migrer la Base de Données
 
 ```bash
-npm start
+npx prisma migrate dev
+npx prisma generate
+npm run db:seed
+```
+
+### 5. Démarrer le Backend
+
+```bash
+npm run dev
 ```
 
 Le serveur démarre sur `http://localhost:3001`
+
+### 6. Installer et Démarrer le Frontend
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Le frontend démarre sur `http://localhost:3000`
+
+### 7. Accéder à l'Application
+
+Ouvrez http://localhost:3000 dans votre navigateur.
+
+**Compte de démo :**
+- Email : `demo@forja.dev`
+- Mot de passe : `demo123`
 
 ---
 

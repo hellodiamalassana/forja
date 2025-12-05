@@ -1,0 +1,118 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:14-alpine
+    container_name: forja-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-forja}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-forja_password_change_me}
+      POSTGRES_DB: ${POSTGRES_DB:-forja}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - forja-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-forja}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Backend API
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: forja-backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      # Database
+      DATABASE_URL: postgresql://${POSTGRES_USER:-forja}:${POSTGRES_PASSWORD:-forja_password_change_me}@postgres:5432/${POSTGRES_DB:-forja}?schema=public
+
+      # JWT
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
+
+      # Stripe
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET}
+      STRIPE_PRICE_ID_PRO: ${STRIPE_PRICE_ID_PRO}
+      STRIPE_PRICE_ID_BUSINESS: ${STRIPE_PRICE_ID_BUSINESS}
+
+      # Claude API
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+
+      # Server
+      PORT: 3001
+      NODE_ENV: production
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost}
+
+      # Generation
+      MAX_PROJECT_SIZE_MB: 50
+      TEMP_DIR: ./temp
+      OUTPUT_DIR: ./generated_projects
+
+      # Rate Limiting
+      RATE_LIMIT_WINDOW_MS: 900000
+      RATE_LIMIT_MAX_REQUESTS: 100
+    volumes:
+      - backend_temp:/app/temp
+      - backend_generated:/app/generated_projects
+    networks:
+      - forja-network
+    command: sh -c "npx prisma migrate deploy && node server.js"
+
+  # Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: forja-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    networks:
+      - forja-network
+
+  # Nginx Reverse Proxy
+  nginx:
+    image: nginx:alpine
+    container_name: forja-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+      - nginx_cache:/var/cache/nginx
+    depends_on:
+      - frontend
+      - backend
+    networks:
+      - forja-network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  postgres_data:
+    driver: local
+  backend_temp:
+    driver: local
+  backend_generated:
+    driver: local
+  nginx_cache:
+    driver: local
+
+networks:
+  forja-network:
+    driver: bridge
